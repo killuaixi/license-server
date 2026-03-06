@@ -3,29 +3,43 @@ import json
 
 app = Flask(__name__)
 
-with open("licenses.json") as f:
-    keys = json.load(f)
+LICENSE_FILE = "licenses.json"
 
-@app.route("/verify",methods=["POST"])
+def load_licenses():
+    with open(LICENSE_FILE, "r") as f:
+        return json.load(f)
+
+def save_licenses(data):
+    with open(LICENSE_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+@app.route("/verify", methods=["POST"])
 def verify():
 
     data = request.json
-    key = data["key"]
-    hwid = data["hwid"]
+    key = data.get("key")
+    hwid = data.get("hwid")
 
-    if key not in keys:
-        return jsonify({"status":"INVALID"})
+    licenses = load_licenses()
 
-    if keys[key] == "":
-        keys[key] = hwid
-        with open("licenses.json","w") as f:
-            json.dump(keys,f,indent=4)
-        return jsonify({"status":"VALID"})
+    if key not in licenses:
+        return jsonify({"status": "INVALID"})
 
-    if keys[key] == hwid:
-        return jsonify({"status":"VALID"})
+    if licenses[key] == "":
+        licenses[key] = hwid
+        save_licenses(licenses)
+        return jsonify({"status": "VALID"})
 
-    return jsonify({"status":"HWID_MISMATCH"})
+    if licenses[key] == hwid:
+        return jsonify({"status": "VALID"})
+
+    return jsonify({"status": "HWID_MISMATCH"})
 
 
-app.run(host="0.0.0.0",port=5000)
+@app.route("/")
+def home():
+    return "License Server Online"
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
