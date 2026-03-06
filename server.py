@@ -7,6 +7,11 @@ app = Flask(__name__)
 LICENSE_FILE = "licenses.json"
 
 def load_licenses():
+    if not os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, "w") as f:
+            json.dump({}, f)
+        return {}
+
     with open(LICENSE_FILE, "r") as f:
         return json.load(f)
 
@@ -18,8 +23,15 @@ def save_licenses(data):
 def verify():
 
     data = request.json
+
+    if not data:
+        return jsonify({"status": "ERROR"})
+
     key = data.get("key")
     hwid = data.get("hwid")
+
+    if not key or not hwid:
+        return jsonify({"status": "ERROR"})
 
     licenses = load_licenses()
 
