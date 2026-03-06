@@ -38,15 +38,24 @@ def verify():
     if key not in licenses:
         return jsonify({"status": "INVALID"})
 
+    # bind hwid ครั้งแรก
     if licenses[key] == "":
         licenses[key] = hwid
         save_licenses(licenses)
         return jsonify({"status": "VALID"})
 
+    # hwid ตรง
     if licenses[key] == hwid:
         return jsonify({"status": "VALID"})
 
+    # hwid ไม่ตรง
     return jsonify({"status": "HWID_MISMATCH"})
+
+
+@app.route("/licenses")
+def show_licenses():
+    licenses = load_licenses()
+    return jsonify(licenses)
 
 
 @app.route("/")
