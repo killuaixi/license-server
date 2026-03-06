@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 import json
 import os
 
 app = Flask(__name__)
 
 LICENSE_FILE = "licenses.json"
+
 
 def load_licenses():
     if not os.path.exists(LICENSE_FILE):
@@ -15,9 +16,51 @@ def load_licenses():
     with open(LICENSE_FILE, "r") as f:
         return json.load(f)
 
+
 def save_licenses(data):
     with open(LICENSE_FILE, "w") as f:
         json.dump(data, f, indent=4)
+
+
+@app.route("/")
+def home():
+    return render_template_string("""
+    <html>
+    <head>
+        <title>License Server</title>
+    </head>
+    <body style="font-family: Arial; text-align:center; margin-top:50px;">
+        <h1>License Server</h1>
+
+        <input id="key" placeholder="Enter License Key"><br><br>
+        <input id="hwid" placeholder="Enter HWID"><br><br>
+
+        <button onclick="check()">Verify</button>
+
+        <h3 id="result"></h3>
+
+        <script>
+        function check(){
+            fetch("/verify",{
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json"
+                },
+                body:JSON.stringify({
+                    key:document.getElementById("key").value,
+                    hwid:document.getElementById("hwid").value
+                })
+            })
+            .then(res=>res.json())
+            .then(data=>{
+                document.getElementById("result").innerText="Status: "+data.status
+            })
+        }
+        </script>
+    </body>
+    </html>
+    """)
+
 
 @app.route("/verify", methods=["POST"])
 def verify():
@@ -38,29 +81,15 @@ def verify():
     if key not in licenses:
         return jsonify({"status": "INVALID"})
 
-    # bind hwid ครั้งแรก
     if licenses[key] == "":
         licenses[key] = hwid
         save_licenses(licenses)
         return jsonify({"status": "VALID"})
 
-    # hwid ตรง
     if licenses[key] == hwid:
         return jsonify({"status": "VALID"})
 
-    # hwid ไม่ตรง
     return jsonify({"status": "HWID_MISMATCH"})
-
-
-@app.route("/licenses")
-def show_licenses():
-    licenses = load_licenses()
-    return jsonify(licenses)
-
-
-@app.route("/")
-def home():
-    return "License Server Online"
 
 
 if __name__ == "__main__":
